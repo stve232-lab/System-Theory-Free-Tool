@@ -1,3 +1,10 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Upload an MT5 report, pick your prop firm, and see how often your EA passes the challenge across 10,000 simulations.">
+<style>html,body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 <title>Challenge Pass Odds</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -126,14 +133,52 @@ table.firms td:first-child{font-family:var(--body)}
 table.firms tr.current td{color:var(--accent)}
 .pill{display:inline-block;min-width:48px;padding:1px 6px;border-radius:4px;font-weight:600}
 .preview{filter:blur(5px);user-select:none;pointer-events:none}
+.signup{max-width:560px;margin:0 auto;padding:clamp(40px,9vh,96px) 16px 48px}
+.signup h1{font-size:clamp(32px,6vw,48px);margin:10px 0 12px}
+.signup .lede{font-size:16px}
+.gets{list-style:none;padding:0;margin:22px 0 24px;display:grid;gap:10px;font-size:14.5px}
+.gets li{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:baseline}
+.gets li::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--pass);transform:translateY(-1px)}
+.signup .panel{padding:20px}
+.signup .lead{gap:12px}
+.signup .lead input[type=email]{flex-basis:100%}
+.signup .lead .btn{flex-basis:100%;justify-content:center;padding:12px 16px;font-size:15px}
+.facts{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:18px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.who{font-size:12px;color:var(--muted);margin-top:8px}
+.who button{font:inherit;background:none;border:0;padding:0;color:var(--accent);cursor:pointer;text-decoration:underline}
 @media (prefers-reduced-motion:reduce){.bar i,.drop,.cmp .track i{transition:none}}
 </style>
+</head>
+<body>
 
-<div class="wrap">
+
+<section class="signup" id="signup">
+  <div class="eyebrow">The System Theory · free tool</div>
+  <h1>What are the odds your EA passes the challenge?</h1>
+  <p class="lede">Upload an MT5 backtest report, pick your prop firm, and we replay your real trading days through 10,000 simulated challenges.</p>
+  <ul class="gets">
+    <li>Your pass rate on FTMO, BrightFunded and FundedNext programs</li>
+    <li>What kills your attempts: daily loss, max loss, or neither</li>
+    <li>Your expected spend on failed challenges before one passes</li>
+    <li>How your EA compares with our own portfolio under the same rules</li>
+  </ul>
+  <form class="panel lead" id="lead-form" novalidate>
+    <label for="lead-email" style="flex-basis:100%;font-weight:600;font-size:14px">Your email</label>
+    <input type="email" id="lead-email" placeholder="you@example.com" autocomplete="email" required>
+    <label class="consent" for="lead-consent"><input type="checkbox" id="lead-consent"><span id="consent-text">Also send me The System Theory emails about systematic prop trading. Unsubscribe anytime.</span></label>
+    <button class="btn primary" type="submit" id="lead-btn">Get free access</button>
+    <p class="err" id="lead-err" hidden></p>
+    <p class="fine" id="lead-fine">Free. No password. We store your email and your test results. Your MT5 report never leaves your browser.</p>
+  </form>
+  <div class="facts"><span>10,000 simulations per test</span><span>8 prop firm programs</span><span>MT5 Strategy Tester &amp; history reports</span></div>
+</section>
+
+<div class="wrap" id="app" hidden>
   <header>
     <div class="eyebrow">The System Theory · free tool</div>
     <h1>What are the odds your EA passes the challenge?</h1>
     <p class="lede">Upload an MT5 backtest report and pick your prop firm. We replay your real trading days through 10,000 simulated challenges and show how often you pass, and what kills you when you don't.</p>
+    <p class="who" id="who"></p>
   </header>
 
   <div class="grid">
@@ -251,23 +296,13 @@ table.firms tr.current td{color:var(--accent)}
     <article class="card gate" id="gate">
       <div>
         <h3>Your EA at every prop firm</h3>
-        <p class="intro">See how this report does on all 8 programs at your current position size: pass rate, daily-limit breaches and how long passing takes. Free, just enter your email.</p>
+        <p class="intro">This report on all 8 programs at your current position size: pass rate, daily-limit breaches and median trading days to pass. Best first.</p>
       </div>
-      <div>
-        <form id="lead-form" class="lead" novalidate>
-          <label for="lead-email" class="sr">Email address</label>
-          <input type="email" id="lead-email" placeholder="you@example.com" autocomplete="email" required>
-          <button class="btn primary" type="submit" id="lead-btn">Show every firm</button>
-          <label class="consent" for="lead-consent"><input type="checkbox" id="lead-consent"><span id="consent-text">Also send me The System Theory emails about systematic prop trading. Unsubscribe anytime.</span></label>
-          <p class="err" id="lead-err" hidden></p>
-          <p class="fine" id="lead-fine">We store your email and your test result. Your report never leaves your browser.</p>
-        </form>
-        <div class="tablewrap" id="allfirms-wrap">
-          <table class="firms preview" id="allfirms" aria-label="Pass rate at every firm">
-            <thead><tr><th>Program</th><th>Pass rate</th><th>Daily breaches</th><th>Median days</th></tr></thead>
-            <tbody id="allfirms-body"></tbody>
-          </table>
-        </div>
+      <div class="tablewrap">
+        <table class="firms" id="allfirms" aria-label="Pass rate at every firm">
+          <thead><tr><th>Program</th><th>Pass rate</th><th>Daily breaches</th><th>Median days</th></tr></thead>
+          <tbody id="allfirms-body"></tbody>
+        </table>
       </div>
     </article>
 
@@ -585,6 +620,7 @@ function render(){
   window.__last = {pass, exp, R};
   renderUpsell(pool, R, pass, median, f('daily'));
   renderAllFirms();
+  saveResult();
 }
 
 /* ---------- conversion section ---------- */
@@ -715,8 +751,8 @@ const CONFIG = {
   supabaseAnonKey: 'sb_publishable_WdMcYo3AaGMjT2PFNCfBSw_eb9FiUpN',  // anon (eyJ...) or publishable (sb_publishable_...) key; safe to publish
   privacyUrl: ''        // e.g. https://thesystemtheory.com/privacy
 };
-let unlocked = false;
-try { unlocked = localStorage.getItem('tst-pass-unlocked') === '1'; } catch {}
+let userEmail = null;
+try { userEmail = localStorage.getItem('tst-pass-email'); } catch {}
 
 if(CONFIG.privacyUrl){
   const a = document.createElement('a'); a.href = CONFIG.privacyUrl; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Privacy policy';
@@ -742,35 +778,47 @@ async function submitLead(email, consent){
 
 $('lead-form').addEventListener('submit', async e => {
   e.preventDefault();
-  const email = $('lead-email').value.trim(), err = $('lead-err'), btn = $('lead-btn');
+  const email = $('lead-email').value.trim().toLowerCase(), err = $('lead-err'), btn = $('lead-btn');
   err.hidden = true;
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent = 'Enter a valid email address, like name@example.com.'; err.hidden = false; return; }
-  btn.disabled = true; btn.textContent = 'Saving…';
+  btn.disabled = true; btn.textContent = 'Opening…';
   try{
     await submitLead(email, $('lead-consent').checked);
   }catch(ex){
-    if(/invalid email/i.test(ex.message)){ err.textContent = 'That email address looks invalid. Check it and try again.'; err.hidden = false; btn.disabled = false; btn.textContent = 'Show every firm'; return; }
-    console.error('Lead save failed', ex); // don't block the visitor if our side fails
+    if(/invalid email/i.test(ex.message)){ err.textContent = 'That email address looks invalid. Check it and try again.'; err.hidden = false; btn.disabled = false; btn.textContent = 'Get free access'; return; }
+    console.error('Lead save failed', ex); // don't lock the visitor out if our side fails
   }
-  unlocked = true;
-  try { localStorage.setItem('tst-pass-unlocked','1'); } catch {}
-  showUnlocked(); renderAllFirms();
+  userEmail = email;
+  try { localStorage.setItem('tst-pass-email', email); } catch {}
+  startApp();
 });
 
-function showUnlocked(){
-  $('lead-form').hidden = unlocked;
-  $('allfirms').classList.toggle('preview', !unlocked);
+// Saves the result of each real uploaded report to the visitor's row (once per report)
+function saveResult(){
+  if(!userEmail || !report || report.example || report.saved) return;
+  report.saved = true;
+  submitLead(userEmail, false).catch(ex => console.error('Result save failed', ex));
 }
 
-// Placeholder rows shown blurred until unlock (no real numbers in the page)
-function renderPreviewRows(){
-  $('allfirms-body').innerHTML = FIRMS.filter(f=>f.id!=='custom').map(f =>
-    `<tr><td>${f.name}</td><td>00%</td><td>0%</td><td>00</td></tr>`).join('');
+let started = false;
+function startApp(){
+  $('signup').hidden = true;
+  $('app').hidden = false;
+  $('who').innerHTML = '';
+  const who = document.createElement('span'); who.textContent = `Signed in as ${userEmail} · `;
+  const sw = document.createElement('button'); sw.type = 'button'; sw.textContent = 'Use a different email';
+  sw.onclick = () => { try { localStorage.removeItem('tst-pass-email'); } catch {} location.reload(); };
+  $('who').append(who, sw);
+  window.scrollTo(0, 0);
+  if(started) return;
+  started = true;
+  showReport();
+  applyFirm();
+  scheduleFinder();
 }
 
 let allFirmsTimer;
 function renderAllFirms(){
-  if(!unlocked){ renderPreviewRows(); return; }
   clearTimeout(allFirmsTimer);
   allFirmsTimer = setTimeout(() => {
     const sc = +$('scale').value, k = 100 / report.deposit * sc;
@@ -819,8 +867,9 @@ $('copy').onclick = async ()=>{
 };
 
 report = exampleReport();
-showUnlocked();
-showReport();
-applyFirm();
-scheduleFinder();
+$('firm').value = FIRMS[0].id;
+if(userEmail) startApp(); else $('signup').hidden = false;
 </script>
+
+</body>
+</html>
