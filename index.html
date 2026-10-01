@@ -1,0 +1,826 @@
+<title>Challenge Pass Odds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: two-column instrument panel — report + firm rules on the left, verdict + simulated equity paths on the right; stacks on phones */
+:root{
+  --bg:#000000; --surface:#0B0E12; --line:#1E252E; --ink:#E8EDF2; --muted:#8D99A6;
+  --accent:#86A4FF; --accent-soft:#141D33;
+  --pass:#3CC486; --daily:#F0AE3C; --maxl:#F06A6A; --open:#5E6875;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 16px 48px}
+header{margin-bottom:22px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,4.4vw,42px);line-height:1.05;margin:6px 0 6px;text-wrap:balance}
+.lede{color:var(--muted);max-width:62ch;margin:0}
+.grid{display:grid;grid-template-columns:350px 1fr;gap:20px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;min-width:0}
+.panel h2{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.group+.group{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
+.field{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px;margin-bottom:12px}
+.field label{font-size:13.5px;font-weight:500}
+.field .val{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:600}
+.field input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--accent)}
+.field small{grid-column:1/-1;color:var(--muted);font-size:12px;margin-top:-2px}
+.field.full{grid-template-columns:1fr}
+select,input[type=number]{font:inherit;font-family:var(--mono);font-size:13px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+select{width:100%}
+button:focus-visible,input:focus-visible,select:focus-visible,.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+.rules{display:grid;grid-template-columns:1fr 92px;gap:6px 10px;align-items:center;font-size:13px}
+.rules label{color:var(--muted)}
+.rules input,.rules select{width:92px;text-align:right}
+.rules select{text-align:left}
+.rules .hint{grid-column:1/-1;font-size:12px;color:var(--muted);margin-top:4px}
+
+.drop{display:block;border:1.5px dashed var(--line);border-radius:8px;padding:16px 14px;text-align:center;cursor:pointer;transition:border-color .15s, background .15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop strong{display:block;font-size:14px}
+.drop span{font-size:12px;color:var(--muted)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.loaded{margin-top:12px;border:1px solid var(--line);border-radius:8px;padding:12px}
+.loaded.example{border-style:dashed}
+.badge{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--daily);border:1px solid currentColor;border-radius:99px;padding:1px 7px;margin-bottom:6px}
+.loaded .name{font-weight:600;font-size:14px;overflow-wrap:anywhere}
+.loaded .meta{font-size:12px;color:var(--muted)}
+.rstats{display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-family:var(--mono);font-size:12px;margin-top:10px}
+.rstats b{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.err{color:var(--maxl);font-size:13px;margin-top:8px}
+
+.verdict{display:grid;grid-template-columns:auto 1fr;gap:6px 24px;align-items:center}
+@media (max-width:520px){.verdict{grid-template-columns:1fr}}
+.big{font-family:var(--display);font-weight:700;font-size:clamp(64px,11vw,104px);line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.big span{font-size:.45em;color:var(--muted);margin-left:2px}
+.verdict p{margin:0;max-width:52ch}
+.verdict .tag{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:99px;margin-bottom:6px;border:1px solid currentColor}
+.source{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px}
+.bar{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:18px 0 8px;background:var(--line)}
+.bar i{display:block;height:100%;transition:width .35s}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.legend b{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:18px}
+@media (max-width:620px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);padding:12px 14px;min-width:0}
+.stat .k{font-size:12px;color:var(--muted)}
+.stat .v{font-family:var(--mono);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}
+.chartbox{margin-top:18px}
+.chartbox .head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:baseline}
+.chartbox .head span{font-size:12px;color:var(--muted)}
+canvas{display:block;width:100%;height:280px;margin-top:8px}
+.insight{margin-top:16px;padding:12px 14px;border-left:3px solid var(--daily);background:var(--bg);border-radius:0 6px 6px 0;font-size:14px}
+.insight:empty{display:none}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.btn{font:inherit;font-weight:600;font-size:14px;border-radius:7px;padding:10px 16px;cursor:pointer;border:1px solid var(--accent);text-decoration:none;display:inline-flex;align-items:center}
+.btn.primary{background:var(--accent);color:#000}
+.btn.ghost{background:transparent;color:var(--accent)}
+.note{font-size:12px;color:var(--muted);margin-top:22px;max-width:80ch}
+.upsell{margin-top:20px;max-width:1120px}
+.upsell > h2{font-family:var(--display);font-size:clamp(22px,3vw,28px);font-weight:700;margin:0 0 4px;text-wrap:balance}
+.upsell > p{color:var(--muted);margin:0 0 16px;max-width:66ch}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:960px){.cards{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h3{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0}
+.card .num{font-family:var(--display);font-weight:700;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.card p{margin:0;font-size:14px}
+.card .sub{font-size:12.5px;color:var(--muted)}
+.cmp{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;font-size:13px}
+.cmp .track{height:12px;background:var(--line);border-radius:3px;overflow:hidden}
+.cmp .track i{display:block;height:100%;transition:width .4s}
+.cmp b{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.locked{position:relative;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--bg)}
+.locked .blur{filter:blur(6px);user-select:none;font-family:var(--mono);font-size:15px;font-weight:600}
+.locked .lock{position:absolute;inset:0;display:grid;place-items:center;font-size:12.5px;font-weight:600;color:var(--accent)}
+.card .btn{align-self:flex-start;margin-top:auto}
+.cta{margin-top:16px;background:var(--accent);color:#000;border-radius:10px;padding:22px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px}
+.cta h3{font-family:var(--display);font-size:22px;margin:0 0 4px;text-wrap:balance}
+.cta p{margin:0;opacity:.9;max-width:60ch;font-size:14px}
+.cta .btn{background:#000;color:var(--ink);border-color:#000}
+.gate{margin-top:16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:20px;align-items:start}
+@media (max-width:860px){.gate{grid-template-columns:1fr}}
+.gate h3{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink);margin:0 0 6px}
+.gate .intro{color:var(--muted);font-size:14px;margin:0}
+.lead{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.lead input[type=email]{flex:1 1 220px;min-width:0;font:inherit;font-size:14px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:10px 12px}
+.consent{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--muted);flex-basis:100%;cursor:pointer}
+.consent input{margin-top:3px;accent-color:var(--accent)}
+.fine{font-size:11.5px;color:var(--muted);margin:0;flex-basis:100%}
+.fine a{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.tablewrap{overflow-x:auto}
+table.firms{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+table.firms th{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:right;padding:6px 8px;border-bottom:1px solid var(--line)}
+table.firms th:first-child,table.firms td:first-child{text-align:left}
+table.firms td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--mono)}
+table.firms td:first-child{font-family:var(--body)}
+table.firms tr.current td{color:var(--accent)}
+.pill{display:inline-block;min-width:48px;padding:1px 6px;border-radius:4px;font-weight:600}
+.preview{filter:blur(5px);user-select:none;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.bar i,.drop,.cmp .track i{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">The System Theory · free tool</div>
+    <h1>What are the odds your EA passes the challenge?</h1>
+    <p class="lede">Upload an MT5 backtest report and pick your prop firm. We replay your real trading days through 10,000 simulated challenges and show how often you pass, and what kills you when you don't.</p>
+  </header>
+
+  <div class="grid">
+    <form class="panel" id="form" autocomplete="off">
+      <div class="group">
+        <h2>Your MT5 report</h2>
+        <label class="drop" id="drop" for="file">
+          <input type="file" id="file" accept=".html,.htm">
+          <strong>Upload an MT5 report</strong>
+          <span>Strategy Tester report or account history, saved as HTML</span>
+        </label>
+        <div class="err" id="err" hidden></div>
+        <div class="loaded" id="loaded">
+          <span class="badge" id="r-badge">Example data</span>
+          <div class="name" id="r-name"></div>
+          <div class="meta" id="r-meta"></div>
+          <div class="rstats" id="r-stats"></div>
+        </div>
+        <div class="field" style="margin:14px 0 0">
+          <label for="scale">Position size vs. report</label><span class="val" id="scale-v"></span>
+          <input type="range" id="scale" min="0.1" max="3" step="0.05" value="1">
+          <small id="scale-note"></small>
+        </div>
+      </div>
+
+      <div class="group">
+        <h2>Prop firm</h2>
+        <div class="field full"><label for="firm" style="position:absolute;width:1px;height:1px;overflow:hidden">Prop firm and program</label>
+          <select id="firm"></select></div>
+        <div class="field"><label for="acct">Account size</label>
+          <select id="acct" style="width:auto"></select></div>
+        <div class="rules" id="rules">
+          <label for="t1">Phase 1 target %</label><input type="number" id="t1" step="0.5" min="0.5">
+          <label for="t2">Phase 2 target % (0 = none)</label><input type="number" id="t2" step="0.5" min="0">
+          <label for="dl">Max daily loss %</label><input type="number" id="dl" step="0.5" min="0.5">
+          <label for="ml">Max total loss %</label><input type="number" id="ml" step="0.5" min="1">
+          <label for="mt">Max loss type</label><select id="mt"><option value="static">Static</option><option value="trail">Trailing EOD</option></select>
+          <label for="md">Min trading days / phase</label><input type="number" id="md" step="1" min="0">
+          <label for="bd">Best day cap % (0 = none)</label><input type="number" id="bd" step="5" min="0" max="100">
+          <label for="fee">Challenge fee</label><input type="number" id="fee" step="1" min="0" placeholder="enter">
+          <div class="hint" id="rules-hint"></div>
+        </div>
+      </div>
+    </form>
+
+    <section class="panel" aria-live="polite">
+      <div class="verdict">
+        <div class="big" id="big">–<span>%</span></div>
+        <div>
+          <span class="tag" id="tag">Running</span>
+          <p id="summary">Simulating…</p>
+          <div class="source" id="source"></div>
+        </div>
+      </div>
+
+      <div class="bar" id="bar" aria-hidden="true"></div>
+      <div class="legend" id="legend"></div>
+
+      <div class="stats">
+        <div class="stat"><div class="k">Expectancy / trade</div><div class="v" id="s-exp">–</div></div>
+        <div class="stat"><div class="k">Median trading days to pass</div><div class="v" id="s-days">–</div></div>
+        <div class="stat"><div class="k">Avg losses to hit daily limit</div><div class="v" id="s-streak">–</div></div>
+        <div class="stat"><div class="k">Expected cost to pass</div><div class="v" id="s-cost">–</div></div>
+      </div>
+
+      <div class="chartbox">
+        <div class="head"><h2 style="margin:0">60 of the simulated challenges</h2><span>Phase 1 equity, % of starting balance</span></div>
+        <canvas id="chart" role="img" aria-label="Simulated equity paths"></canvas>
+      </div>
+
+      <div class="insight" id="insight"></div>
+
+      <div class="actions">
+        <button type="button" class="btn primary" id="copy">Copy my result</button>
+        <a class="btn ghost" href="https://thesystemtheory.com" target="_blank" rel="noopener">How we build portfolios that pass →</a>
+      </div>
+
+      <p class="note">The simulation resamples your real trading days, so a bad day stays a bad day, but the order of days is shuffled and the future won't match the backtest exactly. It uses closed-trade P&amp;L only; floating drawdown, slippage and spread widening make real results worse, so treat this as an upper bound. There is no time limit, as with most CFD challenges. Firm rules were checked in October 2026 and can change; verify them on the firm's site. Your report never leaves your browser. Not financial advice.</p>
+    </section>
+  </div>
+
+  <section class="upsell" aria-live="polite">
+    <h2>What would change your odds</h2>
+    <p>The same report, three questions most traders never ask before paying for a challenge.</p>
+    <div class="cards">
+      <article class="card">
+        <h3>Your failed-challenge bill</h3>
+        <div class="num" id="u-bill">–</div>
+        <p id="u-bill-text"></p>
+        <p class="sub" id="u-bill-sub"></p>
+      </article>
+
+      <article class="card">
+        <h3>Your EA vs. our portfolio</h3>
+        <div class="cmp">
+          <span>Your EA</span><div class="track"><i id="u-a-bar"></i></div><b id="u-a">–</b>
+          <span>System Theory portfolio</span><div class="track"><i id="u-p-bar"></i></div><b id="u-p">–</b>
+        </div>
+        <p id="u-port-text"></p>
+        <p class="sub">Our own portfolio of uncorrelated systems at fixed size, available to members as an add-on. 8 years of backtest (2018–2026), run through the same simulator and the same firm rules as your EA.</p>
+      </article>
+
+      <article class="card">
+        <h3>Best firm and size for this EA</h3>
+        <p id="u-best-text">Testing every firm preset at 8 position sizes…</p>
+        <div class="locked" aria-label="Locked result">
+          <div class="blur" aria-hidden="true">████████ · 2-Step ████ · ●.●●×</div>
+          <div class="lock">Members only</div>
+        </div>
+        <p class="sub">Ranked by pass rate within 120 trading days per phase, so it won't pick a size that takes years.</p>
+        <a class="btn ghost" id="u-unlock" href="https://thesystemtheory.com" target="_blank" rel="noopener">Unlock the full report →</a>
+      </article>
+    </div>
+
+    <article class="card gate" id="gate">
+      <div>
+        <h3>Your EA at every prop firm</h3>
+        <p class="intro">See how this report does on all 8 programs at your current position size: pass rate, daily-limit breaches and how long passing takes. Free, just enter your email.</p>
+      </div>
+      <div>
+        <form id="lead-form" class="lead" novalidate>
+          <label for="lead-email" class="sr">Email address</label>
+          <input type="email" id="lead-email" placeholder="you@example.com" autocomplete="email" required>
+          <button class="btn primary" type="submit" id="lead-btn">Show every firm</button>
+          <label class="consent" for="lead-consent"><input type="checkbox" id="lead-consent"><span id="consent-text">Also send me The System Theory emails about systematic prop trading. Unsubscribe anytime.</span></label>
+          <p class="err" id="lead-err" hidden></p>
+          <p class="fine" id="lead-fine">We store your email and your test result. Your report never leaves your browser.</p>
+        </form>
+        <div class="tablewrap" id="allfirms-wrap">
+          <table class="firms preview" id="allfirms" aria-label="Pass rate at every firm">
+            <thead><tr><th>Program</th><th>Pass rate</th><th>Daily breaches</th><th>Median days</th></tr></thead>
+            <tbody id="allfirms-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </article>
+
+    <div class="cta">
+      <div>
+        <h3>Stop paying for challenges one system can't pass.</h3>
+        <p>Members get the full firm and size breakdown for every EA, the MT5 risk settings to match, and the framework we use to combine uncorrelated systems into portfolios that pass. Our ready-made portfolio is available to members as an add-on.</p>
+      </div>
+      <a class="btn" href="https://thesystemtheory.com" target="_blank" rel="noopener">Join The System Theory</a>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const RUNS = 10000, DAY_CAP = 1500;
+
+/* ---------- prop firm presets (checked Oct 2026) ---------- */
+const FIRMS = [
+  {id:'ftmo2', name:'FTMO · 2-Step', t1:10, t2:5, dl:5, ml:10, mt:'static', md:4, bd:0, cur:'€',
+    sizes:{10000:89, 25000:250, 50000:345, 100000:540, 200000:1080}},
+  {id:'ftmo1', name:'FTMO · 1-Step', t1:10, t2:0, dl:3, ml:10, mt:'trail', md:0, bd:50, cur:'€',
+    sizes:{10000:79, 25000:199, 50000:319, 100000:499, 200000:999}},
+  {id:'bfc', name:'BrightFunded · 2-Step Classic', t1:10, t2:5, dl:5, ml:10, mt:'static', md:5, bd:0, cur:'€',
+    sizes:{5000:49, 10000:null, 25000:null, 50000:null, 100000:null, 200000:997}},
+  {id:'bfb', name:'BrightFunded · 2-Step Bright', t1:8, t2:5, dl:4, ml:8, mt:'static', md:5, bd:0, cur:'€',
+    sizes:{5000:47, 10000:null, 25000:null, 50000:null, 100000:null, 200000:947}},
+  {id:'bf1', name:'BrightFunded · 1-Step', t1:10, t2:0, dl:3, ml:6, mt:'trail', md:5, bd:0, cur:'€',
+    sizes:{5000:49, 10000:null, 25000:null, 50000:null, 100000:null, 200000:997}},
+  {id:'fn2', name:'FundedNext · Stellar 2-Step', t1:8, t2:5, dl:5, ml:10, mt:'static', md:5, bd:0, cur:'$',
+    sizes:{6000:null, 15000:null, 25000:null, 50000:null, 100000:null, 200000:null}},
+  {id:'fn1', name:'FundedNext · Stellar 1-Step', t1:10, t2:0, dl:3, ml:6, mt:'static', md:2, bd:0, cur:'$',
+    sizes:{6000:null, 15000:null, 25000:null, 50000:null, 100000:null, 200000:null}},
+  {id:'fnl', name:'FundedNext · Stellar Lite', t1:8, t2:4, dl:4, ml:8, mt:'static', md:5, bd:0, cur:'$',
+    sizes:{5000:null, 10000:null, 25000:null, 50000:null, 100000:null, 200000:null}},
+  {id:'custom', name:'Custom rules', t1:10, t2:5, dl:5, ml:10, mt:'static', md:4, bd:0, cur:'$',
+    sizes:{10000:null, 25000:null, 50000:null, 100000:null, 200000:null}},
+];
+
+let report = null;
+
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+
+/* ---------- example report (seeded, clearly labelled) ---------- */
+function exampleReport(){
+  let s = 20240101; const rnd = () => (s = (s*1664525 + 1013904223) % 4294967296) / 4294967296;
+  const trades = []; let d = new Date(Date.UTC(2023,0,2));
+  for(let i=0;i<480;i++){
+    do { d = new Date(d.getTime()+86400000); } while(d.getUTCDay()===0 || d.getUTCDay()===6);
+    if(rnd() < 0.25) continue;
+    const n = 1 + Math.floor(rnd()*3), key = d.toISOString().slice(0,10).replace(/-/g,'.');
+    for(let k=0;k<n;k++){
+      const loss = 650 + rnd()*500;
+      trades.push({day:key, pnl: rnd() < 0.42 ? loss*(1.0+rnd()*1.3) : -loss});
+    }
+  }
+  const r = buildReport(trades, 100000); r.name = 'Example EA · sample backtest'; r.example = true; return r;
+}
+
+/* ---------- MT5 report parsing ---------- */
+function num(s){
+  if(s == null) return NaN;
+  const t = String(s).replace(/[\s ]/g,'').replace(/,(?=\d{3}(\D|$))/g,'');
+  return parseFloat(t.replace(',', '.'));
+}
+function decode(buf){
+  const b = new Uint8Array(buf);
+  if(b[0]===0xFF && b[1]===0xFE) return new TextDecoder('utf-16le').decode(buf);
+  if(b[0]===0xFE && b[1]===0xFF) return new TextDecoder('utf-16be').decode(buf);
+  let zeros = 0; for(let i=1;i<Math.min(b.length,2000);i+=2) if(b[i]===0) zeros++;
+  if(zeros > 400) return new TextDecoder('utf-16le').decode(buf);
+  return new TextDecoder('utf-8').decode(buf);
+}
+const TIME_RE = /^\d{4}\.\d{2}\.\d{2}/;
+
+function parseReport(doc){
+  const rows = [...doc.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent.trim()));
+  let deposit = NaN;
+  for(const r of rows){
+    const i = r.findIndex(c => /^initial deposit/i.test(c));
+    if(i >= 0){ const v = r.slice(i+1).map(num).find(x => !isNaN(x)); if(v) { deposit = v; break; } }
+  }
+  const trades = []; let firstBalance = NaN;
+
+  let hi = rows.findIndex(r => r.includes('Deal') && r.includes('Direction') && r.includes('Profit'));
+  if(hi >= 0){
+    const h = rows[hi], col = n => h.indexOf(n);
+    const cT=col('Time'), cType=col('Type'), cDir=col('Direction'), cC=col('Commission'), cF=col('Fee'), cS=col('Swap'), cP=col('Profit'), cB=col('Balance');
+    let pending = 0;
+    for(let k=hi+1;k<rows.length;k++){
+      const r = rows[k];
+      if(r.includes('Deal') && r.includes('Direction')) break;
+      if(r.length < h.length - 1 || !TIME_RE.test(r[cT]||'')) continue;
+      const type = (r[cType]||'').toLowerCase();
+      const cost = (num(r[cC])||0) + (cF>=0?(num(r[cF])||0):0) + (num(r[cS])||0);
+      if(type === 'balance' || type === 'credit'){
+        if(isNaN(firstBalance) && num(r[cP]) > 0) firstBalance = num(r[cP]);
+        continue;
+      }
+      if(type !== 'buy' && type !== 'sell') continue;
+      const dir = (r[cDir]||'').toLowerCase();
+      if(dir === 'in'){ pending += cost; continue; }
+      if(dir.includes('out')){
+        trades.push({day: r[cT].slice(0,10), pnl: (num(r[cP])||0) + cost + pending});
+        pending = 0;
+        if(isNaN(firstBalance) && isNaN(deposit) && cB>=0 && trades.length===1) firstBalance = num(r[cB]) - trades[0].pnl;
+      }
+    }
+  }
+  if(!trades.length){
+    hi = rows.findIndex(r => r.includes('Position') && r.includes('Profit') && r.filter(c=>c==='Time').length >= 2);
+    if(hi >= 0){
+      const h = rows[hi];
+      const cT2 = h.lastIndexOf('Time'), cC=h.indexOf('Commission'), cS=h.indexOf('Swap'), cP=h.indexOf('Profit');
+      for(let k=hi+1;k<rows.length;k++){
+        const r = rows[k];
+        if(r.length === 1 && r[0]) break;
+        if(r.length < h.length - 1 || !TIME_RE.test(r[cT2]||'')) continue;
+        trades.push({day: r[cT2].slice(0,10), pnl: (num(r[cP])||0) + (num(r[cC])||0) + (num(r[cS])||0)});
+      }
+    }
+  }
+  if(!trades.length) throw new Error("Couldn't find any closed trades. Save the report from the MT5 Strategy Tester (Backtest tab → right-click → Report → HTML) or from History → right-click → Report, with the terminal set to English.");
+  if(isNaN(deposit)) deposit = firstBalance;
+  if(!(deposit > 0)) throw new Error("Couldn't read the starting balance from this report.");
+  return buildReport(trades, deposit);
+}
+
+function buildReport(trades, deposit){
+  const byDay = new Map();
+  trades.forEach(t => { if(!byDay.has(t.day)) byDay.set(t.day, []); byDay.get(t.day).push(t.pnl); });
+  const days = [...byDay.values()];
+  const wins = trades.filter(t=>t.pnl>0), losses = trades.filter(t=>t.pnl<0);
+  const gw = wins.reduce((a,t)=>a+t.pnl,0), gl = -losses.reduce((a,t)=>a+t.pnl,0);
+  const avgLoss = losses.length ? gl/losses.length : NaN, avgWin = wins.length ? gw/wins.length : NaN;
+  const keys = [...byDay.keys()].sort();
+  return {deposit, days, stats:{
+    n: trades.length, nDays: days.length, first: keys[0], last: keys[keys.length-1],
+    wr: wins.length/trades.length, pf: gl ? gw/gl : Infinity,
+    avgLossPct: avgLoss/deposit*100, rr: avgWin/avgLoss,
+    expR: (gw-gl)/trades.length/avgLoss, net: gw-gl,
+    worstDayPct: Math.min(...days.map(d=>d.reduce((a,b)=>a+b,0)))/deposit*100
+  }};
+}
+
+async function loadFile(file){
+  $('err').hidden = true;
+  try{
+    const doc = new DOMParser().parseFromString(decode(await file.arrayBuffer()), 'text/html');
+    const r = parseReport(doc); r.name = file.name; r.example = false;
+    report = r; $('scale').value = 1; showReport(); schedule(); scheduleFinder();
+  }catch(e){
+    $('err').textContent = e.message || "That file couldn't be read as an MT5 report.";
+    $('err').hidden = false;
+  }
+}
+
+function showReport(){
+  const s = report.stats;
+  $('loaded').classList.toggle('example', report.example);
+  $('r-badge').hidden = !report.example;
+  $('r-name').textContent = report.name;
+  $('r-meta').textContent = `${s.n} trades over ${s.nDays} trading days · ${s.first.replace(/\./g,'-')} to ${s.last.replace(/\./g,'-')}`;
+  const money = v => (v<0?'−':'') + '$' + Math.abs(Math.round(v)).toLocaleString();
+  $('r-stats').innerHTML = [
+    ['Starting balance', money(report.deposit)],
+    ['Net profit', money(s.net)],
+    ['Win rate', Math.round(s.wr*100)+'%'],
+    ['Avg win : avg loss', isFinite(s.rr) ? '1 : '+s.rr.toFixed(2) : '–'],
+    ['Profit factor', isFinite(s.pf) ? s.pf.toFixed(2) : '∞'],
+    ['Trades per day', (s.n/s.nDays).toFixed(1)],
+  ].map(([k,v])=>`<span>${k}</span><b>${v}</b>`).join('');
+}
+
+/* ---------- firm rules UI ---------- */
+const RULE_IDS = ['t1','t2','dl','ml','mt','md','bd'];
+function currentFirm(){ return FIRMS.find(f => f.id === $('firm').value); }
+function fillSizes(firm, keep){
+  const sizes = Object.keys(firm.sizes).map(Number);
+  const pick = sizes.includes(keep) ? keep : (sizes.includes(100000) ? 100000 : sizes[sizes.length-1]);
+  $('acct').innerHTML = sizes.map(v => `<option value="${v}"${v===pick?' selected':''}>$${v/1000}K</option>`).join('');
+}
+function applyFirm(){
+  const f = currentFirm();
+  RULE_IDS.forEach(id => $(id).value = f[id]);
+  fillSizes(f, +$('acct').value);
+  applyFee();
+  $('rules-hint').textContent = f.id === 'custom'
+    ? 'Set the rules of any firm by hand.'
+    : `Preset rules for ${f.name}. Editing any rule switches to Custom.`;
+  schedule();
+}
+function applyFee(){
+  const f = currentFirm(), v = f.sizes[+$('acct').value];
+  $('fee').value = v ?? '';
+}
+function toCustom(){
+  if($('firm').value === 'custom') return;
+  const f = currentFirm(), c = FIRMS.find(x=>x.id==='custom');
+  const acct = +$('acct').value, fee = $('fee').value;
+  $('firm').value = 'custom'; c.cur = f.cur;
+  c.sizes = {...Object.fromEntries(Object.keys(f.sizes).map(k=>[k,null]))};
+  fillSizes(c, acct); $('fee').value = fee;
+  $('rules-hint').textContent = 'Set the rules of any firm by hand.';
+}
+
+function rules(){
+  const f = currentFirm();
+  const n = (id, lo, d) => { const v = parseFloat($(id).value); return isFinite(v) && v >= lo ? v : d; };
+  return {
+    name: f.id==='custom' ? 'custom rules' : f.name,
+    t1: n('t1', 0.5, 10), t2: n('t2', 0, 0), dl: n('dl', 0.5, 5), ml: n('ml', 1, 10),
+    trail: $('mt').value === 'trail', md: Math.round(n('md', 0, 0)), bd: n('bd', 0, 0)/100,
+    fee: parseFloat($('fee').value), cur: f.cur, acct: +$('acct').value
+  };
+}
+
+/* ---------- simulation ---------- */
+// One phase. Balances are % of the starting balance.
+function runPhase(next, R, target, record, cap){
+  let bal = 0, day = 0, peakEOD = 0, floor = -R.ml, locked = false, best = 0, posSum = 0;
+  const path = record ? [0] : null;
+  while(day < cap){
+    day++;
+    if(locked){ if(record) path.push(bal); if(day >= R.md) return {res:'pass', days:day, path}; continue; }
+    const start = bal, trades = next();
+    for(let t=0;t<trades.length;t++){
+      bal += trades[t];
+      if(bal <= floor){ if(record) path.push(bal); return {res:'max', days:day, path}; }
+      if(bal <= start - R.dl){ if(record) path.push(bal); return {res:'daily', days:day, path}; }
+      if(bal >= target && (!R.bd)) break; // stop trading once target is hit
+    }
+    const dayPnl = bal - start;
+    if(dayPnl > 0){ posSum += dayPnl; if(dayPnl > best) best = dayPnl; }
+    if(R.trail && bal > peakEOD){ peakEOD = bal; floor = Math.min(0, peakEOD - R.ml); }
+    if(record) path.push(bal);
+    if(bal >= target && (!R.bd || best <= R.bd*posSum + 1e-9)){
+      if(day >= R.md) return {res:'pass', days:day, path};
+      locked = true; // target hit early: sit on it with minimal trades until minimum days are met
+    }
+  }
+  return {res:'open', days:day, path};
+}
+
+function simulate(next, R, runs = RUNS, cap = DAY_CAP, keepPaths = true){
+  const c = {pass:0, daily:0, max:0, open:0}, passDays = [], paths = [];
+  for(let i=0;i<runs;i++){
+    const rec = keepPaths && i < 60;
+    const a = runPhase(next, R, R.t1, rec, cap);
+    if(rec) paths.push(a);
+    if(a.res !== 'pass'){ c[a.res]++; continue; }
+    if(!R.t2){ c.pass++; passDays.push(a.days); continue; }
+    const b = runPhase(next, R, R.t2, false, cap);
+    c[b.res]++;
+    if(b.res==='pass') passDays.push(a.days + b.days);
+  }
+  passDays.sort((x,y)=>x-y);
+  return {c, median: passDays.length ? passDays[Math.floor(passDays.length/2)] : null, paths};
+}
+
+function fmtPct(n){ return (n*100).toFixed(n>=0.1||n===0?0:1) + '%' }
+
+function render(){
+  const R = rules(), scale = +$('scale').value, s = report.stats;
+  const k = 100 / report.deposit * scale;
+  const pool = report.days.map(d => d.map(x => x*k));
+  const risk = s.avgLossPct * scale, worst = s.worstDayPct * scale;
+
+  $('scale-v').textContent = scale.toFixed(2)+'×';
+  $('scale-note').textContent = `Average losing trade = ${risk.toFixed(2)}% of the account. Worst day in the report = ${worst.toFixed(2)}%.`;
+  $('source').textContent = `${report.example ? 'Example data' : s.n + ' real trades'} · ${R.name}`;
+
+  const pick = () => pool[(Math.random()*pool.length)|0];
+  const {c, median, paths} = simulate(pick, R);
+  const f = key => c[key]/RUNS;
+  const pass = f('pass');
+  const phases = R.t2 ? 'both phases' : 'the challenge';
+
+  $('big').innerHTML = (pass*100).toFixed(pass<0.1?1:0) + '<span>%</span>';
+  const [label, col] = pass >= .6 ? ['Strong edge', css('--pass')] : pass >= .35 ? ['Coin flip territory', css('--daily')] : ['Likely to fail', css('--maxl')];
+  $('tag').textContent = label; $('tag').style.color = col; $('big').style.color = col;
+
+  const fails = [['daily','the daily loss limit'],['max','the max loss limit'],['open','never reaching the target']].sort((a,b)=>c[b[0]]-c[a[0]]);
+  const failTotal = RUNS - c.pass;
+  $('summary').textContent = failTotal === 0
+    ? `Every simulated attempt passed ${phases}.`
+    : `You pass ${phases} in ${fmtPct(pass)} of simulated attempts. When you fail, ${fmtPct(c[fails[0][0]]/failTotal)} of the time it's ${fails[0][1]}.`;
+
+  const segs = [['pass','Passed',css('--pass')],['daily','Daily loss breach',css('--daily')],['max','Max loss breach',css('--maxl')],['open','Never reached target',css('--open')]]
+    .filter(([key]) => key !== 'open' || c.open > 0);
+  $('bar').innerHTML = segs.map(([key,,cl])=>`<i style="width:${f(key)*100}%;background:${cl}"></i>`).join('');
+  $('legend').innerHTML = segs.map(([key,n,cl])=>`<span><i style="background:${cl}"></i>${n} <b>${fmtPct(f(key))}</b></span>`).join('');
+
+  const exp = s.expR;
+  $('s-exp').textContent = isFinite(exp) ? (exp>=0?'+':'') + exp.toFixed(2) + 'R' : '–';
+  $('s-exp').style.color = exp > 0 ? css('--pass') : css('--maxl');
+  $('s-days').textContent = median ? median + ' days' : '–';
+  $('s-streak').textContent = risk > 0 ? Math.ceil(R.dl / risk - 1e-9) + ' in a row' : '–';
+  $('s-cost').textContent = pass <= 0 ? '∞'
+    : isFinite(R.fee) ? R.cur + Math.round(R.fee/pass).toLocaleString()
+    : (1/pass).toFixed(1) + ' attempts';
+
+  let ins = '';
+  if(!report.example && s.n < 100) ins = `Only ${s.n} trades in this report. That's too small a sample to trust the result; aim for a few hundred trades across different market conditions. `;
+  if(exp <= 0) ins += `Expectancy is ${exp.toFixed(2)}R per trade. No position size fixes a negative edge; the rules only decide how fast the account dies.`;
+  else if(worst <= -R.dl) ins += `Your worst backtest day lost ${Math.abs(worst).toFixed(1)}% at this size, which on its own breaks the ${R.dl}% daily limit. Every time the simulation draws that day, the challenge ends.`;
+  else if(f('daily') > .2) ins += `The daily limit is doing most of the damage. Your losses cluster within a day, so lowering size usually helps more than chasing a higher win rate.`;
+  else if(R.trail && f('max') > .25) ins += `The trailing max loss is catching you after winning streaks. The floor follows your best closing balance, so giving back gains is what ends these attempts.`;
+  else if(median && median > 120) ins += `You pass, but slowly: the median is ${median} trading days. That's the case for combining several uncorrelated systems instead of pushing one harder.`;
+  else if(risk >= 2) ins += `The average loss is ${risk.toFixed(1)}% of the account. The pass rate may look fine, but the same sizing on a funded account leaves little room for a normal losing streak.`;
+  if(report.example) ins = 'This is example data. Upload your own MT5 report to see your real odds.';
+  $('insight').textContent = ins.trim();
+
+  drawChart(paths, R);
+  window.__last = {pass, exp, R};
+  renderUpsell(pool, R, pass, median, f('daily'));
+  renderAllFirms();
+}
+
+/* ---------- conversion section ---------- */
+// System Theory portfolio: one [day low, day close] pair per trading day, % of starting balance.
+// Dates, symbols and trades are stripped and the days are shuffled.
+const PORTFOLIO_DAYS = "-0.29;-0.499;-0.555;-0.495,0.698;-0.585;1.05;0.781;0.232,1.442;-0.408;-0.458,-0.201;0.172;-0.425;-0.431;-0.01;-0.401;-0.888;-0.501,-0.48;-1.081;-0.397,0.38;-0.408;0.11,0.8;0.955;-0.886;-0.483,0.85;-0.418;-1.494,-0.252;-0.727;-0.231;-0.342,0.203;0.085;-0.106;0.003,0.473;-0.029,0.512;-0.244;-0.171,0.205;-0.593;-0.091,0.271;-0.36,-0.152;-0.236,0.209;-0.416;0.19;-0.404;1.374;-0.284;0.283;-0.772;-0.597;-0.402;-0.353,-0.129;2.25;-0.512;0.709,1.181;0.064;1.224;-0.403;0.169,0.605;-0.403;0.023,2.316;-0.395;1.26,2.441;0.279,0.446;-0.413;-0.44;0.412;-0.399;0.07;-0.949;0.259;0.537;-0.404;0.286,0.805;-0.398,0.416;-0.402,0.588;-0.491;-0.296;-0.404,-0.352;-0.401,-0.149;0.138,0.168;1.206;0.356,1.069;0.169;-0.404,0.429;-0.508;-0.405;-0.12,0.09;-0.391;-0.415,0.156;-0.405;-0.497;0.174;0.038;-0.492,-0.295;0.619;-0.402;-0.924;-0.557;-0.555;-0.541,0.527;-0.503;-0.408;0.153;0.999;-0.41;0.185;0.457;-0.401,0.106;0.078,0.482;-0.413;0.161;1.313;3.448;-0.255,-0.07;-0.544;-0.197,-0.074;-0.402;-0.094;10.074;-0.12;1.129,1.685;-0.405;-0.403;1.361;-0.403;-0.112;-0.416;1.771,1.914;-0.402;-1.058;-0.183;-0.112;-0.398;-0.409;-0.214;0.066;-0.183;-0.398;-0.655;0.399,0.423;-0.402;-0.474,2.185;-0.599,-0.304;-0.711;-0.401;-0.499;-0.416;0.112;0.416,1.605;0.734;-0.496,0.65;-1.395;-0.495;0.678;0.328;-0.119;-0.401;0.196;-0.604;-1.044,0.145;-0.428,-0.29;-0.397,-0.115;2.235;-0.748,-0.43;0.447;0.059;-0.4;0.738;-0.334,-0.177;0.256;-0.805;0.355;0.018;0.302;5.817;-0.224;-0.119,9.873;-0.407,-0.01;-0.549;-0.406,-0.214;-0.394;0.647,0.925;-0.497,1.634;-0.542;0.461,0.811;0.35,0.55;0.232;-0.636;-0.5,0.398;0.705;-0.403;0.274,0.768;-0.412;0.187;0.045,0.469;-0.458;-0.089,0.25;-0.107;-0.402;-0.396;-0.369;-0.163,0.214;-0.4;-0.124;-1.016;-0.475;0.032;-0.932;-0.8;0.259;0.182,0.601;-0.116,0.303;-0.262;0.239,0.626;-0.388;-0.27;1.015;0.212;-0.048;-0.141;1.43;0.235,0.673;0.785;0.379;-0.218,0.984;-1.129;-0.092;-0.339;-0.439;-0.405;2.123;2.611;-0.035,0.862;0.178,1.262;-0.685;-0.012;-0.396;0.185;-0.193;-0.164;-0.401,-0.311;0.509;-0.011;0.095,1.789;-0.848;-0.415;2.118;0.394,0.764;0.145,1.574;-0.266,0.251;0.248;0.96;0.086,0.167;-0.659,0.866;0.27,0.46;-0.407,-0.316;0.369;1.432;0.941,1.488;-0.818,2.737;-0.649;-0.4,0.873;-0.401,-0.278;-0.902;0.896;-0.559,-0.396;0.871,1.899;1.276;-0.139,-0.077;-0.899;0.735;-0.098,0.967;0.658;0.138;0.298;-0.595,-0.362;-0.311,0.71;-0.498;-0.496,-0.335;-0.622;0.849;-0.405;-0.533;0.507;0.258;0.099;0.128;-0.401;0.695;-0.187;1.47;-0.539;-0.399;-0.895;-0.099,-0.098;-0.76;-0.325,-0.229;1.181;0.247;0.087;-0.396,-0.093;0.072;0.224;0.71;0.388,1.002;-0.173;-0.328,0.272;-0.471;-0.068,1.468;-0.4;0.3,2.158;0.085;0.148;-0.139;0.402,0.43;0.246;0.642;0.783;-0.65;-0.057,0.608;0.03;-0.421,-0.181;0.208;0.924;-0.409,0.083;-1.069;-0.388;-0.001;-0.488,-0.17;-0.119;0.613,0.838;0.701,1.279;-0.401;0.645,0.647;-0.452;-0.411;-0.417,0.216;-0.399;-0.194,-0.016;0.572;-0.666,-0.393;0.408;0.313,0.521;-0.809,-0.629;-0.026;-0.841;0.331,1.6;-0.182;-0.607,-0.352;-0.65;-1.352,-0.446;0.002,0.524;-0.401;-0.605,0.9;0.065,0.791;-0.901;-0.953,-0.476;-0.4;0.243,0.528;-1.498;0.763;-0.399;0.169;-0.038;0.041;-0.268,0.891;0.336;-0.401;1.275;-0.405;-0.396;-0.121;-0.349,0.491;0.428;-0.498;-0.496,-0.16;0.209;0.143;-0.408;1.431;-0.098;1.023;-0.2,0.453;-0.403,-0.317;-0.228;-0.702;0.057;-0.724,0.827;0.256;-1.218;0.122;0.409;-0.499,0.653;1.087;-0.404;0.427;0.27;0.326;-0.403;-0.674;1.686;0.491,0.589;-0.537;-0.133,1.198;-0.411,-0.274;0.444;-0.592;-0.714,-0.043;-0.196;0.513,0.566;-0.691,0.103;0.791;-0.309,12.644;0.384;0.803;-0.5;0.051;-0.4;-0.405,-0.341;-0.214;3.5;0.004;1.46;-0.17;1.598;2.403;-0.175,9.015;-0.103,1.506;-1.508;-0.597;0.04,0.134;2.019,3.051;0.185;-0.401,0.003;-0.411;-0.618,0.19;-0.777;-0.483;-0.803;-0.259,0.131;0.033;2.094;-0.404,-0.321;-0.693,0.714;0.095;-0.397;0.384;0.61;0.902;-0.16;-0.764;-0.443,0.417;-0.586;1.014;-0.398;-0.052;0.006;-0.523;-0.798;-0.527;-0.398;-0.084;-0.412;0.303;-0.122;-0.405;-0.399;-0.64,1.39;2.478,3.507;0.936;0.204,0.523;0.396;-0.92;0.78;-0.495;-0.571;0.206;-0.159;0.012;-0.522;0.19;-0.5;0.443;-0.169,0.099;-0.354,-0.106;-0.36;-0.553,0.35;0.211,0.268;-0.401;0.135;0.004;-0.011;-0.896;-0.401;-0.402;-0.15,0.136;-0.4;-0.024,2.062;-0.635;-0.328;-0.492;-0.638;0.953;-0.403;0.531;-0.166,-0.066;0.062,1.109;-0.396;0.179;0.372;0.348,1.414;0.852;0.182;-0.5;0.261;-0.401;0.004,1.462;0.65,2.265;0.195;0.442,0.842;0.142;-0.377;0.298,1.946;0.033;0;-0.076;-0.412;-0.499;-0.9;-0.066;-0.417;0.246;-0.023,0.852;-0.084,1.075;-0.406;-0.752;-0.13;0.136;-0.986,-0.827;1.248,1.718;-0.047;-0.258,0.195;-0.53;-0.406;1.241;0.438,1.34;0.447;-0.205;-0.492,0.02;1.447,2.239;-0.14;-0.171;-0.333,0.874;0.078;-0.527,-0.488;-0.406;-0.04,0.181;0.094,1.605;-0.497,0.438;0.705,1.138;0.182;0.03;0.174;1.378,2.089;-0.401,-0.324;0.492,0.77;-0.017;0.898,0.94;0.032;-0.405;-1.873,-1.132;0.035;-0.399;0.132,1.686;0.009;0.619,1.09;0.925;-0.402,2.246;0.534;0.079;0.214,0.722;0.08;-0.393;0.56;-0.597;0.019;-0.077;-0.34;-0.012;0.222;-0.398;0.78;-0.006;0.301;-0.404;-0.698;-0.407;0.235,0.541;0.041;-0.271;0.009;-0.002;0.089,0.277;-0.403;-1.086;-0.621;0.367;-0.877;-0.003;-0.274;-0.399,0.223;-0.397;-0.414,1.09;0.625;1.247;-0.494,-0.18;0.097;-0.412,0.33;-0.32;0.215;0.029;-0.27,-0.123;-0.104;0.973;-0.406;0.328;0.679,0.979;-0.401;-0.802;-0.396,0.063;0.688;-0.607;-0.345;1.911,2.558;0.721,1.865;-0.135;-0.935,-0.626;-0.06,-0.02;-0.714;-0.464;-0.401;-0.493;0.032;0.111;-0.377,-0.306;-0.094;-0.413;2.232,2.463;-0.405;-0.398,-0.023;-0.259;0.461;-0.41;-0.554;0.106,1.675;-0.083,0.712;0.391;0.191,0.51;-0.891;-0.412;0.745;-0.547,0.067;0.315,2.178;-0.404,0.156;-1.003;-0.612,0.11;-0.348;-0.402;-0.898;-0.961,-0.844;-0.503,-0.447;-0.378;0.418;1.22;0.329,0.663;0.111;2.877,5.3;0.749,0.856;-0.403;0.029;-0.285;-0.279;-0.018;0.026;-0.167;0.368;-0.402,0.812;0.191;-0.155;-0.913,-0.871;-0.618;0.337;-0.187;-0.5;2.504;0.883;0.15;-0.139;0.214,0.58;0.399;-0.542,1.297;-1.107;-0.6;-0.763;0.697;-0.571;-0.671;-0.399,0.374;0.494;-0.251,0.456;-0.402;-0.201;0.38;-0.968,-0.719;-1.008,0.272;0.131,0.934;0.085;-0.335,1.39;0.947;-0.379;0.066;-0.295;-0.895;-0.362;0.008;0.226,0.425;-0.895;-0.363;0.878;-1.005,0.293;0.021;0.392,1.075;0.297;-0.404;0.022,1.132;-0.397,0.459;-0.827,2.269;-0.793,-0.395;-0.404;-0.893;0.807;-0.43;0.726;1.363;-0.552;-0.629;-0.401;-0.172;0.943;0.211;0.022,1.297;-0.41;0.015;-0.408;-0.604,0.133;0.632;0.918;0.136;0.202,2.902;0.07;0.028;0.498;-0.216;-0.485;0.572,0.608;-0.401,-0.133;-0.809;0.342,0.386;-0.207,-0.16;0.235;-0.396;1.657;-0.324;0.172;-0.499,-0.41;-0.499;-0.411;-0.499;-0.898;0.898;-0.399,-0.151;0.056,0.507;0.441;0.577;-0.658;0.233;1.508,1.601;0.723,2.291;-0.009;0.22;-0.177;-0.967;0.598;-0.406,-0.145;-0.148;-0.207,-0.124;0.082;2.998;-1.057;0.172;0.168;0.276;-0.056,0.646;0.178;-0.402;2.038;-0.903,0.104;-0.565;1.063,1.113;-0.405,0.152;-1.664;-0.498,0.997;-0.4;-0.409,-0.364;0.194;-0.055;0.363,1.033;0.035;-0.401;1.52,2.058;1.149;-0.412,-0.185;1.066;-0.4;4.296,4.951;0.586;-0.476;0.05;-0.491;-0.493;-0.209;1.295;-0.286;-0.074,0.289;0.789;-0.107;0.437;-0.91;-0.597;0.242,0.573;-0.101,0.431;0.316;0.41;-0.197;-0.244,0.289;-0.414;0.518;1.361;0.006;-0.053;0.285;0.1;1.036;0.594;-0.5;0.514;11.061,11.833;-0.436;-0.137;-0.16,2.023;-0.365,0.158;-0.402;-0.199;-0.111;-0.398;-0.4,1.258;-0.185;0.067;-0.904;-0.408;-0.465;-0.096;0.227;-0.152,-0.131;0.988;0.49,0.908;0.109,0.272;-0.313;0.997;0.405;0.386;-1.205,-0.813;0.337;-0.405,0.114;-0.96,1.334;-0.186,0.491;-0.065,0.132;0.304;-0.547;-0.062;-0.641,-0.267;-0.443;0.225,2.568;-0.85,2.345;0.668,0.703;-0.402;-0.572;0.278,1.815;-0.266,0.569;0.057;-0.405;-0.414,0.042;-0.401;-0.891;-0.17;-0.498;0.333;0.071;-0.336,1.361;-0.339;-0.493;-0.238,0.032;0.01;-0.351;0.308;-0.232;-0.237;0.393;-0.133;-0.21;-0.054;-0.209,0.064;-0.4;-0.647;-0.139;0.017,0.416;-0.276;0.034;-0.284,0.601;0.974;-0.395;-0.594;-0.408;-1.085,-1.016;-0.065,0.2;0.339,1.32;-0.609;-0.499;-0.403;-0.401;-0.407;-0.543;-0.404;0.234,0.444;-0.11;-0.396;-0.899;0.12;-0.196,1.372;-0.082;0.186;-0.878;0.175;0.471,0.669;-0.402;-1.097;0.121;-0.113,0.827;-0.404;0.3;0.239;-1.186;0.552,1.034;0.117;-0.674,-0.642;-1.485,-0.928;-0.417;-0.499,0.011;-0.399,-0.113;-0.481;-0.198;-0.423;-0.538,0.434;-0.071,0.835;0.399,0.945;-1.263;0.175,0.562;1.228;-0.699;0.212;0.441;-0.393,-0.219;-0.403;-0.4;0.111,0.386;-0.915;-0.101;0.294;-0.69;0.023;-1.492,-1.419;-0.144,0.402;0.504;-0.521;0.047,0.957;-0.522,0.29;-0.009,1.561;1.296,2.099;-0.143;0.235;-0.171;-0.158;2.202;-0.43;2.486;-0.403;-0.404;-0.961;-0.151;-0.181,-0.04;-0.284,-0.271;-0.111;-0.555;-0.499;-0.389;-0.402;0.285;-0.395;1.381;0.081,0.566;0.267;-0.78;-0.103,0.384;-0.499;0.264;0.814;0.058;0.269;-0.399;0.137;-0.165,0.774;-0.403,0.618;-0.406;1.115;0.211;-0.404;0.089;0.199;-0.601;0.342,0.74;-0.737;-0.233,-0.155;-0.039;-0.411;0.359;-0.145;-0.511,-0.487;-0.415;-0.49;2.091,2.137;-0.838;-0.055;-0.449,1.132;-0.405;-0.806,-0.531;-0.397;0.543;0.171;0.183;-0.511;-0.404,0.327;-0.556,-0.284;0.167;-0.407;0.511;-0.499;0.245,1.965;-0.323,-0.215;0.348;0.664;0.073;-0.154;-0.4,0.681;0.044,0.314;-0.096,0.255;-0.491;-0.403,0.303;-0.4,-0.079;1.674;0.561;0.056;-0.399,-0.312;-1.103;-0.414;-0.498,0.027;0.705,1.016;0.576;0.193;0.054;-0.499;-0.652;-0.402;-0.179;-0.51,-0.168;-0.04;-0.407;0.624;-0.498;-0.596,0.621;-0.409;-0.401;-0.555;-0.616;-0.574,1.394;0.036;0.355,0.728;-0.401;-0.4;-0.4;0.129;0.121;0.249,0.718;-1.042;0.761;-0.604;-0.286;-0.398;-0.598;-0.747;-0.238,1.959;2.701;0.281;0.331;0.466;-0.396;0.783;0.409,2.422;-0.191,0.323;0.62;-0.315;0.437;-0.069;-0.551;-0.405;-0.14,0.103;-0.14;-0.126;-0.499;-0.543;-1.332;-0.353;1.738;-0.093;-0.168;-0.403;0.365,0.953;-0.399;-0.403;-0.194;0.082;-0.4;-0.413;1.246;-0.679;-0.496;0.522;1.95,2.683;-0.143;0.922;-0.423,-0.349;0.163;0.985;-0.499,0.114;-0.496;0.087;0.581;2.662;0.051,0.284;0.286;1.68;-0.049;-0.437;-0.834,0.557;0.644;-0.506;0.126,0.442;0.105,0.625;0.186;-0.226,2.049;-0.404,-0.22;0.395;-0.699;-0.337,1.237;-0.138,0.044;2.894,3.165;0.008;-0.441;-0.148;-0.404;0.459;-0.402,-0.383;1.674,3.617;-0.401;-0.145,0.395;-0.338,0.194;-1.145,-1.049;0.524,0.906;-0.057;0.626;-0.603;-0.212;-1.127;-0.901;0.254;-0.401,0.232;-0.404;-0.554;0.092,2.083;-0.413,-0.281;-0.097;-0.024,1.481;0.37;0.121,1.702;-0.205;-0.596;-0.519;-0.409;-0.208;0.417;-0.405,0.007;-0.05;0.04;-0.648;-0.784,-0.056;0.018;0.741;-0.406,0.054;-0.406;-0.598,-0.337;-0.084;-0.929;1.728;-0.637;-0.419;-0.812;-0.397;-0.172;-0.478;0.173;1.354;-0.608,-0.281;-0.161;-0.488;0.114;0.944,1.808;-0.399;0.464;-0.131;0.53;-0.13;-0.375,2.78;-0.02;-0.174;0.507;0.776;1.159;-1.061,0.019;-0.752;-0.008;0.752,0.86;0.175;-0.37;0.076;-0.166;0.582;-0.865;-0.391;-0.403,0.556;0.645;0.154;-0.125;0.077;0.807;0.038;0.396,1.975;-0.284;0.671;-0.551,0.56;0.292;-0.508;-0.416,-0.115;-0.238,-0.178;0.686;0.074;-0.4,-0.231;-0.404,-0.217;-0.901;-0.341;-0.548;-0.407;0.669,1.194;0.595;1.001;-0.167;0.1,0.407;-0.493;-0.402;0.52;-0.398;0.291;-0.112;0.035;-1.092,-0.382;1.985,2.157;-0.616;-0.728;0.391,0.877;-0.196;0.414;0.049,1.534;-0.224,1.648;-0.048;-0.036,0.954;0.229,1.051;-0.998;0.174;-0.584;-0.405;-0.899;-0.404;-0.407;0.016;-1.071,-1.05;-0.403;-0.4;0.764;-0.498;0.293,0.304;-0.025;-0.406;-0.405;-0.598;-0.521;0.492,1.404;-0.194,0.636;-0.452;-0.41;-0.846;0.062;-0.423;-0.185;-0.403;-0.121;-0.182;0.034;-1.274;-0.073;0.399;0.237,0.306;-0.128;-0.057;0.42;-0.652;-0.142;-0.147;-0.559;-0.61;-0.397;0.105,0.392;-0.775;0.283;-0.814;0.277;-1.032;0.608;-0.4;-0.401;-0.409,0.568;-0.171,0.09;0.305,0.522;-0.084;1.403;0.595;1.017,1.328;-0.769,0.66;-0.303,2.089;-0.263;0.468;-0.494,-0.467;0.038,0.575;-0.411;-0.205;-0.018,0.166;-0.397;0.569,1.076;0.091;-0.037;-0.049;0.311;-0.093,0.296;1.039;-0.495;-0.414;-0.293,1.1;-0.603,1.067;-0.572,2.931;-0.409,-0.162;-0.453;0.254,0.589;1.577,1.866;3.899,5.481;-0.127;-0.379;-0.163;-0.001;-0.4;-0.041,0.41;1.303;-0.754,-0.177;0.785;0.348,0.916;0.951;0.779;-0.3;-0.013;-0.265;-0.414;-0.498;-0.4;-0.651;0.277;-0.604;-0.417;-0.494,0.107;-0.587;0.25;-0.439,0.175;-0.599,0.182;0.022,0.172;-0.405;-0.214,-0.072;-0.416;-0.402;-0.402;-0.097,1.035;-0.153;0.815;-0.419;-0.645;-0.5;-0.61;0.888;-0.189;0.255;-0.417;-0.552;0.057,0.257;0.092;-0.401;-0.95;-0.181;-0.006,0.581;-0.717;-0.099,-0.038;1.119;-0.481;-0.405;-0.552;0.117;0.106,0.908;-0.112;-0.493;0.17;0.535;0.739;-0.396,2.343;-0.472;-0.401,1.886;-0.404;0.186;-0.406,-0.102;-1.01;0.466,1.211;0.445;0.04;-0.544;-0.403;-0.182;-0.053;-0.499;-0.005,0.039;-0.524;-0.455;-0.264;0.098;-0.607;-0.618;0.496;-1.091;0.04;0.056;-0.4;0.534,12.666;0.365,0.902;-0.927;0.676;0.285;0.839,2.368;-0.786;0.048,2.201;-0.733,0.078;-0.408,0.258;-0.129;0.668;-0.399;-0.274,-0.209;-0.475,-0.158;-0.467;-1.029;0.08;0.962;-0.558;-0.412;-0.402;0.711;0.166;-0.413;-0.287;0.506;-0.402;-0.454;0.025;-0.413;0.817;-0.053;1.413;0.624;-0.5,0.07;-0.412,-0.4;0.252;0.287;-0.39;0.786,1.72;-0.165;-0.112;0.25;-0.173;0.79;-0.611;-0.321;-0.553;0.334;-0.329,0.593;-0.397;-0.031,1.113;-0.305;0.363;-0.552;-0.248;1.292;0.242;0.119;-0.458;-0.468;-0.401;0.062;-0.402;-0.033;0.156;0.293;0.775;-0.498;-0.18;0.056,0.812;-0.403;-0.193,0.262;-1.318;-0.572,-0.215;0.034;-0.317,-0.197;-0.4,0.155;-0.583;-0.497,0.054;-0.151;0.011;-0.045;-0.549;0.183,0.788;-0.128;0.708;-0.633;-0.409,0.115;-0.404;-0.377;0.204;-0.398,1.047;-0.199;0.093;1.714;-0.639,-0.515;0.198,0.603;1.728;0.514;-0.01;-0.404;0.282;0.637;0.393;0.18,0.75;-0.499;-0.753,-0.516;-0.035;0.669;-0.066;-0.395;0.534;0.075,1.054;-0.13;-0.403;0.225;-0.169;-0.401;-0.769;-0.201,-0.032;-0.792,1.352;-0.238;-0.403,-0.253;0.033;-0.402,0.197;0.104,0.968;-0.155,0.027;0.681,1.662;-0.01;-0.418;0.385;-0.554,0.398;-0.382,0.074;0.13;-0.22;-0.236;-0.149;0.98;-0.402;-0.615;-0.623,-0.075;-0.86;-0.41;-0.484;0.982;-0.223,-0.07;0.395;0.103;1.239,1.798;0.112,0.42;0.141;-0.825;1.514;0.502;-0.306;-0.089,0.048;0.593;-0.399;1.034;0.223;-0.13;0.129;-0.377;-0.136,1.036;-0.548;-0.585,-0.424;0.358;0.175;-0.157;-0.605,-0.162;-0.148;0.748,0.86;-0.494;-0.552;-0.401;-0.365;-0.488,0.353;0.15;-0.404;-1.005;-0.12;-0.172;-0.223,1.175;-0.404,1.279;-0.344;-0.492,-0.463;0.577;-0.5,0.536;-0.401;0.642;0.118;0.37;-0.123,0.027;0.453,0.745;-1.011;0.832;1.706;0.032;0.22;-0.108,0.516;-0.167;0.383;-0.108,1.206;-0.252;-0.402,-0.394;-0.163;-0.403;0.093;1.641,1.899;0.208;0.054;-0.897;0.05,0.219;0.966;-0.307,-0.167;-0.411,-0.203;0.215;0.378;0.044,1.357;-0.176;-0.427;0.114,1.08;2.094".split(';').map(d => {
+  const [l, f] = d.split(',').map(Number);
+  return f === undefined ? [l] : [l, f - l];
+});
+const portCache = new Map();
+function portfolioResult(R){
+  const key = [R.t1,R.t2,R.dl,R.ml,R.trail,R.md,R.bd].join('|');
+  if(!portCache.has(key)){
+    const next = () => PORTFOLIO_DAYS[(Math.random()*PORTFOLIO_DAYS.length)|0];
+    const r = simulate(next, R, 5000, DAY_CAP, false);
+    portCache.set(key, {pass: r.c.pass/5000, daily: r.c.daily/5000, median: r.median});
+  }
+  return portCache.get(key);
+}
+function renderUpsell(pool, R, pass, median, dailyRate){
+  const P = portfolioResult(R), pPass = P.pass;
+  window.__portPass = pPass;
+
+  $('u-a').textContent = fmtPct(pass); $('u-p').textContent = fmtPct(pPass);
+  $('u-a-bar').style.cssText = `width:${pass*100}%;background:${css('--open')}`;
+  $('u-p-bar').style.cssText = `width:${pPass*100}%;background:${css('--pass')}`;
+  const dPts = Math.round((pPass - pass)*100);
+  $('u-port-text').textContent = (dPts > 0
+    ? `Same rules, same simulator: the portfolio passes ${dPts} more times per 100 attempts. `
+    : `Your EA keeps up with the portfolio on pass rate here. `)
+    + `Daily-limit breaches: ${fmtPct(dailyRate)} for your EA, ${fmtPct(P.daily)} for the portfolio.`;
+
+  // Failed-challenge bill
+  const fee = R.fee, cur = R.cur;
+  const failsAlone = pass > 0 ? 1/pass - 1 : Infinity;
+  const failsPort = pPass > 0 ? 1/pPass - 1 : Infinity;
+  if(!isFinite(failsAlone)){
+    $('u-bill').textContent = '∞';
+    $('u-bill-text').textContent = 'At this setup the simulation never passed. Every fee you pay here is a donation to the firm.';
+    $('u-bill-sub').textContent = '';
+  } else if(isFinite(fee)){
+    $('u-bill').textContent = cur + Math.round(failsAlone*fee).toLocaleString();
+    $('u-bill').style.color = failsAlone*fee > fee ? css('--maxl') : css('--ink');
+    $('u-bill-text').textContent = `Expected spend on failed ${R.name} challenges before one passes, at ${cur}${fee.toLocaleString()} per attempt.`;
+    $('u-bill-sub').textContent = isFinite(failsPort)
+      ? `With the System Theory portfolio: ${cur}${Math.round(failsPort*fee).toLocaleString()}.`
+      : '';
+  } else {
+    $('u-bill').textContent = failsAlone.toFixed(1);
+    $('u-bill').style.color = css('--ink');
+    $('u-bill-text').textContent = `Failed challenges you should expect before one passes. Enter the challenge fee on the left to see it in money.`;
+    $('u-bill-sub').textContent = isFinite(failsPort) ? `With the System Theory portfolio: ${failsPort.toFixed(2)}.` : '';
+  }
+}
+
+// Best firm + size search. The winning combination is never written to the page.
+const FINDER_CAP = 120, FINDER_RUNS = 1500, SCALES = [0.25,0.5,0.75,1,1.25,1.5,2,2.5];
+let finderToken = 0;
+function runFinder(){
+  const token = ++finderToken, s = report;
+  $('u-best-text').textContent = `Testing every firm preset at ${SCALES.length} position sizes…`;
+  const jobs = [];
+  FIRMS.filter(f => f.id !== 'custom').forEach(f => SCALES.forEach(sc => jobs.push({f, sc})));
+  let best = null, i = 0;
+  const step = () => {
+    if(token !== finderToken) return;
+    const end = Math.min(jobs.length, i + 4);
+    for(; i < end; i++){
+      const {f, sc} = jobs[i];
+      const k = 100 / s.deposit * sc, pool = s.days.map(d => d.map(x => x*k));
+      const R = {t1:f.t1, t2:f.t2, dl:f.dl, ml:f.ml, trail:f.mt==='trail', md:f.md, bd:f.bd/100};
+      const r = simulate(() => pool[(Math.random()*pool.length)|0], R, FINDER_RUNS, FINDER_CAP, false);
+      const p = r.c.pass / FINDER_RUNS;
+      if(!best || p > best.p) best = {p};
+    }
+    if(i < jobs.length) return setTimeout(step, 0);
+    // Compare with the user's current setup under the same time limit
+    const Rc = rules(), sc = +$('scale').value, k = 100 / s.deposit * sc, pool = s.days.map(d => d.map(x => x*k));
+    const cur = simulate(() => pool[(Math.random()*pool.length)|0], Rc, FINDER_RUNS, FINDER_CAP, false).c.pass / FINDER_RUNS;
+    const gain = Math.round((best.p - cur)*100);
+    $('u-best-text').innerHTML = gain >= 3
+      ? `There's a firm and size combination that passes <b>${fmtPct(best.p)}</b> of the time for this EA, against <b>${fmtPct(cur)}</b> for your current setup. That's <b>+${gain} points</b>.`
+      : `Your current setup is already close to the best we found (<b>${fmtPct(best.p)}</b>). Members see the full ranking across every firm and size.`;
+  };
+  setTimeout(step, 150);
+}
+let finderTimer;
+function scheduleFinder(){ clearTimeout(finderTimer); finderTimer = setTimeout(runFinder, 400); }
+
+function drawChart(paths, R){
+  const cv = $('chart'), dpr = window.devicePixelRatio||1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W*dpr; cv.height = H*dpr;
+  const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const L = 44, Rr = 8, T = 10, B = 22;
+  const maxLen = Math.max(...paths.map(x=>x.path.length), 5);
+  const yMin = -R.ml - 2, yMax = R.t1 + 2;
+  const X = i => L + (i/(maxLen-1))*(W-L-Rr);
+  const Y = v => T + (yMax - v)/(yMax-yMin)*(H-T-B);
+  g.font = '11px ' + css('--mono'); g.fillStyle = css('--muted'); g.textAlign='right'; g.textBaseline='middle';
+  const ticks = [-R.ml, -R.ml/2, 0, R.t1/2, R.t1];
+  ticks.forEach(v=>{
+    g.strokeStyle = css('--line'); g.lineWidth = 1; g.setLineDash(v===0?[]:[2,4]);
+    g.beginPath(); g.moveTo(L,Y(v)); g.lineTo(W-Rr,Y(v)); g.stroke();
+    g.fillText((v>0?'+':'')+(+v.toFixed(1))+'%', L-6, Y(v));
+  });
+  g.setLineDash([]);
+  g.lineWidth = 1.5; g.strokeStyle = css('--pass'); g.beginPath(); g.moveTo(L,Y(R.t1)); g.lineTo(W-Rr,Y(R.t1)); g.stroke();
+  g.strokeStyle = css('--maxl'); if(R.trail) g.setLineDash([6,4]);
+  g.beginPath(); g.moveTo(L,Y(-R.ml)); g.lineTo(W-Rr,Y(-R.ml)); g.stroke(); g.setLineDash([]);
+  g.textAlign='left'; g.textBaseline='alphabetic'; g.fillStyle=css('--muted');
+  g.fillText('Day 0', L, H-6); g.textAlign='right'; g.fillText('Day '+(maxLen-1), W-Rr, H-6);
+  const colors = {pass:css('--pass'), daily:css('--daily'), max:css('--maxl'), open:css('--open')};
+  g.lineWidth = 1.2; g.globalAlpha = .55;
+  paths.forEach(({path,res})=>{
+    g.strokeStyle = colors[res]; g.beginPath();
+    path.forEach((v,i)=>{ const y = Y(Math.max(yMin,Math.min(yMax,v))); i?g.lineTo(X(i),y):g.moveTo(X(i),y); });
+    g.stroke();
+  });
+  g.globalAlpha = 1;
+}
+
+
+/* ---------- email gate ---------- */
+// Fill these in when the page is hosted on your own site (see README).
+const CONFIG = {
+  supabaseUrl: 'https://bjlrsopauleecvafugir.supabase.co',
+  supabaseAnonKey: 'sb_publishable_WdMcYo3AaGMjT2PFNCfBSw_eb9FiUpN',  // anon (eyJ...) or publishable (sb_publishable_...) key; safe to publish
+  privacyUrl: ''        // e.g. https://thesystemtheory.com/privacy
+};
+let unlocked = false;
+try { unlocked = localStorage.getItem('tst-pass-unlocked') === '1'; } catch {}
+
+if(CONFIG.privacyUrl){
+  const a = document.createElement('a'); a.href = CONFIG.privacyUrl; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Privacy policy';
+  $('lead-fine').append(' ', a, '.');
+}
+
+async function submitLead(email, consent){
+  if(!CONFIG.supabaseUrl || !CONFIG.supabaseAnonKey){ console.warn('Lead capture not configured; unlocking without saving.'); return; }
+  const L = window.__last || {}, s = report.stats;
+  const res = await fetch(CONFIG.supabaseUrl.replace(/\/$/,'') + '/rest/v1/rpc/submit_lead', {
+    method: 'POST',
+    headers: Object.assign({ 'content-type':'application/json', apikey: CONFIG.supabaseAnonKey },
+      CONFIG.supabaseAnonKey.startsWith('eyJ') ? { Authorization: 'Bearer ' + CONFIG.supabaseAnonKey } : {}),
+    body: JSON.stringify({
+      p_email: email, p_consent: consent, p_consent_text: $('consent-text').textContent,
+      p_firm: L.R ? L.R.name : null, p_account_size: L.R ? L.R.acct : null,
+      p_pass_rate: L.pass ?? null, p_portfolio_pass_rate: window.__portPass ?? null,
+      p_used_example: !!report.example, p_report_trades: s.n
+    })
+  });
+  if(!res.ok){ const t = await res.text(); const e = new Error(t); e.status = res.status; throw e; }
+}
+
+$('lead-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = $('lead-email').value.trim(), err = $('lead-err'), btn = $('lead-btn');
+  err.hidden = true;
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent = 'Enter a valid email address, like name@example.com.'; err.hidden = false; return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    await submitLead(email, $('lead-consent').checked);
+  }catch(ex){
+    if(/invalid email/i.test(ex.message)){ err.textContent = 'That email address looks invalid. Check it and try again.'; err.hidden = false; btn.disabled = false; btn.textContent = 'Show every firm'; return; }
+    console.error('Lead save failed', ex); // don't block the visitor if our side fails
+  }
+  unlocked = true;
+  try { localStorage.setItem('tst-pass-unlocked','1'); } catch {}
+  showUnlocked(); renderAllFirms();
+});
+
+function showUnlocked(){
+  $('lead-form').hidden = unlocked;
+  $('allfirms').classList.toggle('preview', !unlocked);
+}
+
+// Placeholder rows shown blurred until unlock (no real numbers in the page)
+function renderPreviewRows(){
+  $('allfirms-body').innerHTML = FIRMS.filter(f=>f.id!=='custom').map(f =>
+    `<tr><td>${f.name}</td><td>00%</td><td>0%</td><td>00</td></tr>`).join('');
+}
+
+let allFirmsTimer;
+function renderAllFirms(){
+  if(!unlocked){ renderPreviewRows(); return; }
+  clearTimeout(allFirmsTimer);
+  allFirmsTimer = setTimeout(() => {
+    const sc = +$('scale').value, k = 100 / report.deposit * sc;
+    const pool = report.days.map(d => d.map(x => x*k)), N = 2500;
+    const curId = $('firm').value;
+    const rows = FIRMS.filter(f=>f.id!=='custom').map(f => {
+      const R = {t1:f.t1, t2:f.t2, dl:f.dl, ml:f.ml, trail:f.mt==='trail', md:f.md, bd:f.bd/100};
+      const r = simulate(() => pool[(Math.random()*pool.length)|0], R, N, DAY_CAP, false);
+      return {f, p:r.c.pass/N, d:r.c.daily/N, m:r.median};
+    }).sort((a,b)=>b.p-a.p);
+    $('allfirms-body').innerHTML = rows.map(({f,p,d,m}) => {
+      const col = p >= .6 ? css('--pass') : p >= .35 ? css('--daily') : css('--maxl');
+      return `<tr class="${f.id===curId?'current':''}"><td>${f.name}${f.id===curId?' (selected)':''}</td>`+
+        `<td><span class="pill" style="color:${col}">${fmtPct(p)}</span></td><td>${fmtPct(d)}</td><td>${m ?? '–'}</td></tr>`;
+    }).join('');
+  }, 120);
+}
+
+/* ---------- wiring ---------- */
+let timer;
+function schedule(){ clearTimeout(timer); timer = setTimeout(render, 60); }
+$('firm').innerHTML = FIRMS.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+$('firm').addEventListener('change', applyFirm);
+$('acct').addEventListener('change', () => { if($('firm').value !== 'custom') applyFee(); schedule(); });
+RULE_IDS.forEach(id => $(id).addEventListener('input', () => { toCustom(); schedule(); scheduleFinder(); }));
+$('acct').addEventListener('change', scheduleFinder);
+$('fee').addEventListener('input', schedule);
+$('scale').addEventListener('input', () => { schedule(); scheduleFinder(); });
+$('firm').addEventListener('change', scheduleFinder);
+$('form').addEventListener('submit', e=>e.preventDefault());
+window.addEventListener('resize', schedule);
+
+$('file').addEventListener('change', e => { const f = e.target.files[0]; if(f) loadFile(f); e.target.value=''; });
+const drop = $('drop');
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) loadFile(f); });
+
+$('copy').onclick = async ()=>{
+  const {pass, exp, R} = window.__last, s = report.stats;
+  const txt = `My EA (${s.n} trades from an MT5 backtest, PF ${isFinite(s.pf)?s.pf.toFixed(2):'∞'}) passes the ${R.name} challenge ${fmtPct(pass)} of the time across 10,000 simulations. Expectancy ${exp.toFixed(2)}R. Test yours: thesystemtheory.com`;
+  const b = $('copy');
+  try{ await navigator.clipboard.writeText(txt); b.textContent = 'Copied'; }
+  catch{ $('summary').textContent = txt; b.textContent = 'Copy the text above'; }
+  setTimeout(()=>b.textContent='Copy my result', 2000);
+};
+
+report = exampleReport();
+showUnlocked();
+showReport();
+applyFirm();
+scheduleFinder();
+</script>
